@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#1a1c2c">
+  <title>RunQuest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">RUN<span>QUEST</span></div>
+    <div class="lvl">
+      <span id="hero-name">Héros</span> · <b>NIV <span id="lvl">1</span></b>
+      <div class="bar xp"><i id="xp-bar"></i></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ======================= CARTE ======================= -->
+    <section id="tab-map" class="tab active">
+      <div class="panel segment" id="segment"></div>
+      <div class="map-wrap" id="map-wrap"><canvas id="map" class="pix"></canvas></div>
+      <div class="panel">
+        <h2>Journal du chemin</h2>
+        <ul class="events" id="events"></ul>
+      </div>
+    </section>
+
+    <!-- ======================= HÉROS ======================= -->
+    <section id="tab-hero" class="tab">
+      <div class="panel hero-card">
+        <div id="hero-portrait"></div>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="panel">
+        <h2>D'où viennent tes stats</h2>
+        <ul class="howto">
+          <li><b>Niveau</b> : chaque km (+100 XP), chaque mètre de D+ (+2 XP) et chaque boss vaincu.</li>
+          <li><b>PV</b> : le niveau, et les km de tes sorties longues.</li>
+          <li><b>Force</b> : le niveau, et les km courus plus vite que ton allure habituelle.</li>
+          <li><b>Armure</b> : ton dénivelé cumulé.</li>
+          <li><b>Critique</b> : ta série de semaines avec au moins 2 sorties.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>Équipement</h2>
+        <ul class="items" id="items"></ul>
+      </div>
+    </section>
+
+    <!-- ======================= COURSES ======================= -->
+    <section id="tab-runs" class="tab">
+      <div class="panel">
+        <h2>Ajouter des courses</h2>
+        <label class="btn">
+          📂 Importer .fit / .gpx / .tcx
+          <input type="file" id="file" multiple accept=".fit,.gpx,.tcx" hidden>
+        </label>
+        <div id="strava-box"></div>
+        <details>
+          <summary class="btn ghost">✏️ Saisie manuelle</summary>
+          <form id="manual" class="form">
+            <label>Date <input type="datetime-local" name="date" required></label>
+            <label>Distance (km) <input type="number" name="distance_km" step="0.01" min="0.1" required></label>
+            <label>Durée (min) <input type="number" name="duration_min" step="0.1" min="1" required></label>
+            <label>D+ (m) <input type="number" name="elevation_m" step="1" min="0" value="0"></label>
+            <button class="btn" type="submit">Ajouter</button>
+          </form>
+        </details>
+        <p class="hint">Export depuis l'appli Coros : ouvre l'activité → partager → exporter en .fit.
+          Les courses antérieures au début de l'aventure font monter ton niveau sans avancer sur la carte.</p>
+      </div>
+      <div class="panel">
+        <h2>Mes courses</h2>
+        <ul class="runs" id="runs"></ul>
+      </div>
+      <div class="panel danger">
+        <button class="btn ghost" id="demo">🎲 Ajouter des courses de démo</button>
+        <button class="btn ghost" id="reset">♻️ Recommencer l'aventure</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs">
+    <button data-tab="map" class="active">🗺️<span>Carte</span></button>
+    <button data-tab="hero">🛡️<span>Héros</span></button>
+    <button data-tab="runs">👟<span>Courses</span></button>
+  </nav>
+
+  <!-- ======================= COMBAT ======================= -->
+  <div id="combat" class="overlay hidden">
+    <div class="combat-top">
+      <div class="who">
+        <span id="c-boss-name">Boss</span>
+        <div class="bar hp boss"><i id="c-boss-hp"></i></div>
+      </div>
+      <div class="timer" id="c-timer">30</div>
+    </div>
+    <div class="arena" id="arena">
+      <canvas id="arena-canvas" class="pix"></canvas>
+      <div id="floats"></div>
+      <div class="tap-hint" id="tap-hint">TAPE LE BOSS !</div>
+    </div>
+    <div class="combat-bottom">
+      <div class="who">
+        <span>PV <b id="c-hp-txt"></b> <em id="c-shield"></em></span>
+        <div class="bar hp"><i id="c-hp"></i></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="c-potion">🧪 <span id="c-potions">0</span></button>
+        <button class="btn special" id="c-special"><i id="c-charge"></i><span>COUP DE GRÂCE</span></button>
+      </div>
+    </div>
+    <div class="modal hidden" id="c-modal"></div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="{{ url_for('static', filename='sprites.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
