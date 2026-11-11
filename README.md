@@ -1,35 +1,27 @@
-# RunQuest — v0.1
+# RunQuest
 
 Un RPG pixel art qui avance avec tes courses : chaque km te rapproche du prochain boss,
 et tout ce que tu as couru sur le chemin te donne des bonus pour le combat (un clicker de 30 s).
 
-## Lancer le jeu
+**Jouer : https://theo-geral.github.io/runquest/**
 
-```bash
-cd runquest
-pip install -r requirements.txt
-python app.py
-```
-
-- Sur le PC : http://localhost:5000
-- Sur ton téléphone (même Wi-Fi) : http://<IP-du-PC>:5000 (ex. `ipconfig` / `ip a` pour trouver l'IP).
-  Dans Chrome Android : menu ⋮ → « Ajouter à l'écran d'accueil » pour l'avoir comme une appli.
-
-Ta progression est enregistrée dans `data/save.json`.
+C'est une page web statique (HTML/CSS/JS, sans serveur) hébergée par GitHub Pages.
+Sur Android : ouvre le lien dans Chrome → menu ⋮ → « Ajouter à l'écran d'accueil ».
 
 ## Ajouter des courses
 
-1. **Fichiers Coros** : dans l'appli Coros, ouvre une activité → partager → exporter en `.fit`
-   (ou depuis Training Hub sur ordinateur). Formats acceptés : `.fit`, `.gpx`, `.tcx`, plusieurs à la fois.
-2. **Strava** (Coros peut synchroniser automatiquement vers Strava) :
-   - crée une appli sur https://www.strava.com/settings/api
-     (« Authorization Callback Domain » : `localhost`) ;
-   - copie `config.example.json` dans `data/config.json` et remplis `strava_client_id` et `strava_client_secret` ;
-   - relance le serveur, puis onglet **Courses → Connecter Strava** (depuis le PC, via http://localhost:5000).
-3. **Saisie manuelle** ou **courses de démo** pour tester.
+- **Fichiers Coros** : dans l'appli Coros, ouvre une activité → partager → exporter en `.fit`
+  (ou depuis Training Hub sur ordinateur). Formats acceptés : `.fit`, `.gpx`, `.tcx`, plusieurs à la fois.
+- **Saisie manuelle**, ou **courses de démo** pour tester.
 
 Les courses datées d'avant le début de l'aventure (import d'historique) font monter ton niveau et
 tes stats, mais n'avancent pas sur la carte : sinon tout l'historique ferait sauter les zones.
+
+## Sauvegarde
+
+La progression est stockée dans le navigateur (localStorage) : elle reste d'une visite à l'autre,
+mais elle est propre à chaque appareil et disparaît si tu effaces les données du site.
+Onglet **Courses → Exporter ma sauvegarde** pour en garder une copie ou la transférer sur un autre appareil.
 
 ## Règles du jeu
 
@@ -51,8 +43,10 @@ Défaite : tu gardes ton butin de route (sauf les potions bues) et tu peux rées
 
 ## Structure
 
-- `game.py` : toute la logique (stats, zones, butin, combat). Les formules sont là pour l'équilibrage.
-- `importers.py` : lecture des fichiers FIT / GPX / TCX.
-- `strava.py` : OAuth + récupération des activités.
-- `app.py` : serveur Flask et API JSON.
-- `static/` : interface (pixel art dessiné en code dans `sprites.js`, combat dans `app.js`).
+- `index.html`, `css/style.css` : interface.
+- `js/game.js` : toute la logique (stats, zones, butin, combat) ; les formules d'équilibrage sont là.
+- `js/importers.js` : lecture des fichiers FIT (lecteur maison), GPX et TCX.
+- `js/sprites.js` : pixel art dessiné en code (palette Sweetie 16).
+- `js/app.js` : rendu, carte et combat.
+
+Pour tester en local : `python -m http.server` dans le dossier, puis http://localhost:8000.

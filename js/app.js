@@ -2,17 +2,9 @@
 const $ = (s) => document.querySelector(s);
 let VIEW = null;
 
-// ------------------------------------------------------------------ API
-async function api(path, opts = {}) {
-  const res = await fetch(path, {
-    method: opts.method || (opts.body || opts.json ? "POST" : "GET"),
-    headers: opts.json ? { "Content-Type": "application/json" } : undefined,
-    body: opts.json ? JSON.stringify(opts.json) : opts.body,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
-  return data;
-}
+// ------------------------------------------------------------------ État local
+let S = Store.load();
+function commit() { Store.save(S); const v = fullView(S); render(v); return v; }
 
 function toast(msg, ms = 2600) {
   const t = $("#toast");
@@ -37,7 +29,6 @@ function render(v) {
   renderEvents(v);
   renderHero(v);
   renderRuns(v);
-  renderStrava(v);
 }
 
 const LOOT_LABELS = [
@@ -141,30 +132,9 @@ function renderRuns(v) {
       r.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join(""));
     const del = el("button", "del", "✕");
     del.title = "Supprimer";
-    del.onclick = async () => { if (confirm("Supprimer cette course ?")) render(await api(`/api/runs/${r.id}`, { method: "DELETE" })); };
+    del.onclick = () => { if (confirm("Supprimer cette course ?")) { S.runs = S.runs.filter((x) => x.id !== r.id); commit(); } };
     li.append(info, del);
     ul.append(li);
-  }
-}
-
-function renderStrava(v) {
-  const box = $("#strava-box");
-  box.innerHTML = "";
-  if (!v.strava.configured) {
-    box.append(el("p", "hint", "Strava : pas encore configuré (voir README → data/config.json)."));
-  } else if (!v.strava.connected) {
-    const a = el("a", "btn", "🔗 Connecter Strava");
-    a.href = "/strava/connect";
-    box.append(a);
-  } else {
-    const b = el("button", "btn", "🔄 Synchroniser Strava");
-    b.onclick = async () => {
-      b.disabled = true;
-      try { const r = await api("/api/strava/sync", { method: "POST" }); render(r); toast(`${r.added} course(s) récupérée(s)`); }
-      catch (e) { toast(e.message); }
-      b.disabled = false;
-    };
-    box.append(b);
   }
 }
 
@@ -264,7 +234,7 @@ const SKY = {
 
 async function openCombat() {
   let setup;
-  try { setup = await api("/api/combat/start", { method: "POST" }); }
+  try { setup = combatSetup(S); }
   catch (e) { return toast(e.message); }
   const h = setup.hero;
   C = {
@@ -409,9 +379,8 @@ async function finish(won) {
   C.running = false; C.over = true;
   const used = C.used;
   let res;
-  try { res = await api("/api/combat/end", { json: { won, potions_used: used } }); }
+  try { res = { result: combatEnd(S, won, used) }; commit(); }
   catch (e) { toast(e.message); closeCombat(); return; }
-  render(res);
   if (won) {
     const it = res.result.item;
     showModal(`<h1>VICTOIRE !</h1>
@@ -504,35 +473,60 @@ document.addEventListener("keydown", (e) => {
 window.addEventListener("resize", () => { if (C) resizeArena(); });
 
 $("#file").onchange = async (e) => {
-  const fd = new FormData();
-  for (const f of e.target.files) fd.append("files", f);
-  try {
-    const r = await api("/api/import", { body: fd });
-    render(r);
-    toast(r.errors.length ? r.errors.join(" / ") : `${r.added} course(s) importée(s) !`, 4000);
-  } catch (err) { toast(err.message); }
+  const runs = [], errors = [];
+  for (const f of e.target.files) {
+    try { runs.push(...await parseFile(f)); }
+    catch (err) { errors.push(`${f.name} : ${err.message}`); }
+  }
+  const added = addRuns(S, runs);
+  commit();
+  toast(errors.length ? errors.join(" / ") : `${added.length} course(s) importée(s) !`, 4000);
   e.target.value = "";
 };
 
 $("#manual").onsubmit = async (e) => {
   e.preventDefault();
   const d = Object.fromEntries(new FormData(e.target));
-  try { const r = await api("/api/runs", { json: d }); render(r); toast(r.added ? "Course ajoutée !" : "Course déjà présente"); e.target.reset(); }
-  catch (err) { toast(err.message); }
+  const run = makeRun(new Date(d.date), +d.distance_km, +d.duration_min * 60, +d.elevation_m || 0, "manuel", "Course");
+  const added = addRuns(S, [run], true);
+  commit();
+  toast(added.length ? "Course ajoutée !" : "Course déjà présente");
+  if (added.length) { e.target.reset(); setNowInForm(); }
 };
 
-$("#demo").onclick = async () => { render(await api("/api/demo", { method: "POST" })); toast("Courses de démo ajoutées"); };
-$("#reset").onclick = async () => {
+$("#demo").onclick = () => { addRuns(S, demoRuns(), true); commit(); toast("Courses de démo ajoutées"); };
+$("#reset").onclick = () => {
   if (!confirm("Effacer toute la progression et les courses ?")) return;
-  render(await api("/api/reset", { method: "POST" }));
+  S = newState(); commit();
 };
+
+// Sauvegarde : la progression vit dans ce navigateur, on peut l'exporter / la restaurer.
+$("#export").onclick = () => {
+  const blob = new Blob([JSON.stringify(S, null, 1)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `runquest-sauvegarde-${localISO(new Date()).slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$("#restore").onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!Array.isArray(data.runs)) throw new Error("fichier de sauvegarde invalide");
+    if (!confirm("Remplacer ta progression actuelle par cette sauvegarde ?")) return;
+    S = { ...newState(), ...data }; commit(); toast("Sauvegarde restaurée !");
+  } catch (err) { toast(err.message); }
+  e.target.value = "";
+};
+
+function setNowInForm() {
+  document.querySelector("#manual [name=date]").value = localISO(new Date()).slice(0, 16);
+}
 
 (async () => {
-  const q = new URLSearchParams(location.search).get("strava");
-  if (q === "ok") toast("Strava connecté !");
-  if (q) history.replaceState(null, "", "/");
-  const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  document.querySelector("#manual [name=date]").value = now.toISOString().slice(0, 16);
+  setNowInForm();
   await document.fonts?.ready;
-  render(await api("/api/state"));
+  render(fullView(S));
 })();

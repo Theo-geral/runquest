@@ -1,0 +1,17 @@
+{
+  "name": "RunQuest",
+  "short_name": "RunQuest",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1a1c2c",
+  "theme_color": "#1a1c2c",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

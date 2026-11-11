@@ -7,7 +7,9 @@
   <title>RunQuest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg">
 </head>
 <body>
   <header class="top">
@@ -59,7 +61,6 @@
           📂 Importer .fit / .gpx / .tcx
           <input type="file" id="file" multiple accept=".fit,.gpx,.tcx" hidden>
         </label>
-        <div id="strava-box"></div>
         <details>
           <summary class="btn ghost">✏️ Saisie manuelle</summary>
           <form id="manual" class="form">
@@ -70,12 +71,20 @@
             <button class="btn" type="submit">Ajouter</button>
           </form>
         </details>
-        <p class="hint">Export depuis l'appli Coros : ouvre l'activité → partager → exporter en .fit.
+        <p class="hint">Depuis l'appli Coros : ouvre l'activité → partager → exporter en .fit.
           Les courses antérieures au début de l'aventure font monter ton niveau sans avancer sur la carte.</p>
       </div>
       <div class="panel">
         <h2>Mes courses</h2>
         <ul class="runs" id="runs"></ul>
+      </div>
+      <div class="panel">
+        <h2>Sauvegarde</h2>
+        <p class="hint">Ta progression est enregistrée dans ce navigateur. Exporte-la de temps en temps
+          (ou pour passer du téléphone au PC).</p>
+        <button class="btn ghost" id="export">💾 Exporter ma sauvegarde</button>
+        <label class="btn ghost">📥 Restaurer une sauvegarde
+          <input type="file" id="restore" accept=".json,application/json" hidden></label>
       </div>
       <div class="panel danger">
         <button class="btn ghost" id="demo">🎲 Ajouter des courses de démo</button>
@@ -119,7 +128,9 @@
 
   <div class="toast hidden" id="toast"></div>
 
-  <script src="{{ url_for('static', filename='sprites.js') }}"></script>
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/importers.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
